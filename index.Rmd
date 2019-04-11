@@ -10,7 +10,148 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 ## R Markdown
+Prediction Objective:
+
+Based on six average-healthy participants’ weight lifting data collected from accelerometers strapped on their bodies and equipment, project is to build a prediction model to predict how well the participants performed the Unilateral Dumbbell Biceps repetitions.  The ‘how well’ performance is categorized in 5 classes:  
+Class A - exactly according to the specification  
+Class B - throwing the elbows to the front  
+Class C - lifting the dumbbell only halfway  
+Class D - lowering the dumbbell only halfway  
+Class E - throwing the hips to the front
+
+
+Weight Lifting Data Descriptions:
+
+1.	Raw Sensor data - at arm, forearm, belt and dumbbell, in x-y-z         coordinates 
+2.	Sensor Summary data - in various combinations of sensor locations and movement ranges.
+3.	Sensor Statistical data - such as averages, totals, standard deviations etc.
+
+Note:  Weight Lifting Dataset is generously provided by below authors and affiliations.
+
+*Ugulino, W.; Cardador, D.; Vega, K.; Velloso, E.; Milidiu, R.; Fuks, H. Wearable Computing: Accelerometers' Data Classification of Body Postures and Movements. Proceedings of 21st Brazilian Symposium on Artificial Intelligence. Advances in Artificial Intelligence - SBIA 2012. In: Lecture Notes in Computer Science. , pp. 52-61. Curitiba, PR: Springer Berlin / Heidelberg, 2012. ISBN 978-3-642-34458-9. DOI: 10.1007/978-3-642-34459-6_6. 
+Cited by 2 (Google Scholar)*
+
+
+###How Prediction Model is Built:###
+
+Upon understanding the meaning of various data in the training data set.  I immediately realized 160 predictors are too many for any model both from R functions limitations and computing capacity perspectives.  Below is my rationale in the decision to use just the 36 raw sensor data predictors in x-y-z coordinates.
+
+**Predictor Selection Rationale:**
+
+1.	Based on NA value analysis, many of the 160 predictors have missing values (see image below in yellow).  Out of 19622 observations, many predictors have close to 98% (19216/19622*100%) missing values.  This is especially true in the set of Sensor Statistical data, however all of Raw Sensor data (see image below in green) have no missing values.
+
+![Grouped Weight Lifting Data & No of NA values](/Users/francescyan/Desktop/Machine Learning Class/MachineLearningWLEProject/NAValues.png)
+
+2.	It is assumed that all Sensor Summary and Sensor Statistical data are derived from Raw Sensor data, e.g., Amplitude (movement range) is based on raw sensor x-y-z coordinates. 
+ 
+3.	In addition, available Raw Sensor data reflects the complete set of data collected at all observed locations (arm, forearm, belt and dumbbell).
+
+There are sufficient reasons for using just the Raw Sensor data as the model predictors to start.
+
+**Prediction Function Selection Rationale:**
+
+Since this is a classification prediction problem and nature of selected predictors lend themselves to non-linear relationships to prediction outcomes, Random Forest being one of the widely used regression methods is selected as the prediction function.  Although due to long processing time, direct randomForest() is used instead of caret::train().
+
+	rfMod <- randomForest(classe ~ ., data=training)
+
+**Model Build Steps (see below script):**
+
+1.	Provided data is split into Training and Testing in the following proportions:
+a.	Training – 3 / 4
+b.	Testing – 1 / 4
+2.	Only Raw Sensor data and classe are subset into Training and Testing data frames.
+3.	rfMod prediction model is built using randomForest() against Training data.
+4.	Use rfMod to predict against Testing data.
+5.	Evaluate predicted results against testing data (see code chunk show6)
+a.	100% accuracy
+
+###Cross Validation:###
+
+Due to the model’s accuracy of 100%, no additional cross validation was performed other than running the model against the Testing dataset before applying it to the 20 test cases.
+
+No repeated validations against different segments or resamples of the original data needed because the selected predictors appear to predict well for this project.
+
+###Expected Out of Sample (Testing) Error:###
+
+Due to the high model accuracy, expected out of sample error is very small.  As code chunk show6 shows, the predicted values against the testing outcomes are extremely accurate.
+
+No repeat runs of the model against different segments or resamples of the original data needed because the selected predictors appear to predict well for this project.
+
+###Use Prediction Model to predict for the 20 test cases:###
+
+use rfMod to predict for 20 test cases in quiz testing2 (see code chunk show7)
+
+Because of the high model accuracy, all 20 cases were predicted correctly and project quiz passed with 100%.
+
+
+###Script###
+
+```{r show0}
+#show0 - Install required packages & libraies
+install.packages("lubridate", repos = "http://cran.us.r-project.org")
+install.packages("caret", repos = "http://cran.us.r-project.org")
+install.packages("randomForest", repos = "http://cran.us.r-project.org")
+library(lubridate)
+library(caret)
+library(randomForest)
+```
 
 ```{r show1}
-1
+#show1 - Read in training and 20 test case data
+training3= read.csv("~/Desktop/pml-training2.csv")
+testing2= read.csv("~/Desktop/pml-testing2.csv")
+```
+
+```{r show2}
+#show2 - Create training and testing sets
+inTrain3 = createDataPartition(training3$classe, p = 3/4)[[1]]
+training3 = training3[ inTrain3,c('classe', 'accel_arm_x','accel_arm_y','accel_arm_z',
+                              'accel_belt_x','accel_belt_y','accel_belt_z',
+                              'accel_dumbbell_x','accel_dumbbell_y','accel_dumbbell_z',
+                              'accel_forearm_x','accel_forearm_y','accel_forearm_z',
+                              'gyros_arm_x','gyros_arm_y','gyros_arm_z','gyros_belt_x',
+                              'gyros_belt_y','gyros_belt_z','gyros_dumbbell_x',
+                              'gyros_dumbbell_y','gyros_dumbbell_z','gyros_forearm_x',
+                              'gyros_forearm_y','gyros_forearm_z','magnet_arm_x',
+                              'magnet_arm_y','magnet_arm_z','magnet_belt_x',
+                              'magnet_belt_y','magnet_belt_z','magnet_dumbbell_x',
+                              'magnet_dumbbell_y','magnet_dumbbell_z','magnet_forearm_x','magnet_forearm_y','magnet_forearm_z')]
+testing3 = training3[-inTrain3,c('classe', 'accel_arm_x','accel_arm_y','accel_arm_z',
+                             'accel_belt_x','accel_belt_y','accel_belt_z',
+                             'accel_dumbbell_x','accel_dumbbell_y','accel_dumbbell_z',
+                             'accel_forearm_x','accel_forearm_y','accel_forearm_z',
+                             'gyros_arm_x','gyros_arm_y','gyros_arm_z','gyros_belt_x',
+                             'gyros_belt_y','gyros_belt_z','gyros_dumbbell_x',
+                             'gyros_dumbbell_y','gyros_dumbbell_z','gyros_forearm_x',
+                             'gyros_forearm_y','gyros_forearm_z','magnet_arm_x',
+                             'magnet_arm_y','magnet_arm_z','magnet_belt_x',
+                             'magnet_belt_y','magnet_belt_z','magnet_dumbbell_x',
+                             'magnet_dumbbell_y','magnet_dumbbell_z','magnet_forearm_x','magnet_forearm_y','magnet_forearm_z')]
+
+```
+
+```{r show3}
+#show3 - decide how much to seed
+set.seed(19622)
+```
+
+```{r show4}
+#show4 - build model using random forest
+rfMod <- randomForest(classe ~ ., data=training3)
+```
+
+```{r show5}
+#show5 - predict against testing data using built model
+predRf <- predict(rfMod, testing3)
+```
+
+```{r show6}
+#show6 - testing errors for predRf
+confusionMatrix(predRf, testing3$classe)
+```
+
+```{r show7}
+#show7 - apply to testing2 (20 test cases)
+predtesting2Rf <- predict(rfMod, testing2)
+predtesting2Rf
 ```
